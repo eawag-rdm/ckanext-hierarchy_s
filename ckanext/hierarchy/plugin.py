@@ -32,6 +32,7 @@ class HierarchyDisplay(p.SingletonPlugin):
         return {'group_tree': helpers.group_tree,
                 'group_tree_section': helpers.group_tree_section,
                 'group_tree_parents': helpers.group_tree_parents,
+                'get_allowable_parent_groups': helpers.get_allowable_parent_groups,
                 }
 
 
@@ -51,10 +52,4 @@ class HierarchyForm(p.SingletonPlugin, DefaultOrganizationForm):
         from pylons import tmpl_context as c
         model = context['model']
         group_id = data_dict.get('id')
-        if group_id:
-            group = model.Group.get(group_id)
-            c.allowable_parent_groups = \
-                group.groups_allowed_to_be_its_parent(type='organization')
-        else:
-            c.allowable_parent_groups = model.Group.all(
-                                                group_type='organization')
+        c.allowable_parent_groups = helpers.get_allowable_parent_groups(group_id)
