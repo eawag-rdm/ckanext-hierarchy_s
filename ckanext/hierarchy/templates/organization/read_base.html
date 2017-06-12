@@ -6,7 +6,9 @@
   {% set leafname = c.group_dict.shortname|default(c.group_dict.display_name, true) %}
   <li>{% link_for _('Organizations'), controller='organization', action='index' %}</li> 
   {% for parent_node in parent_list %} 
-    <li>{% link_for parent_node.displayname|truncate(45), controller='organization', action='read', id=parent_node.id %}</li> 
+    <li>{% link_for parent_node.displayname|truncate(45),
+      controller='organization', action='read',
+      suppress_active_class=true, id=parent_node.id %}</li> 
   {% endfor %} 
   <li class="active">{% link_for leafname|truncate(45), controller='organization', action='read', id=c.group_dict.name %}</li>  
 {% endblock %}
