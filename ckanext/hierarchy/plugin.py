@@ -33,6 +33,7 @@ class HierarchyDisplay(p.SingletonPlugin):
                 'group_tree_section': helpers.group_tree_section,
                 'group_tree_crumbs': helpers.group_tree_crumbs,
                 'get_allowable_parent_groups': helpers.get_allowable_parent_groups,
+                'render_tree': helpers.render_tree
                 }
 
 
