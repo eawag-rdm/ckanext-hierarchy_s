@@ -2,6 +2,7 @@ import ckan.plugins as p
 from ckanext.hierarchy.logic import action
 from ckanext.hierarchy import helpers
 from ckan.lib.plugins import DefaultOrganizationForm
+import ckan.plugins.toolkit as tk
 import logging
 
 log = logging.getLogger(__name__)
@@ -45,9 +46,6 @@ class HierarchyDisplay(p.SingletonPlugin):
     # the children organizations in the result list
     # HvW: Do this always
     def before_search(self, search_params):
-        print('------------------- IN BEFORE_SEARCH -----------------------')
-        
-
         ''' If include children selected the query string is modified '''
 
         def _tokenize_search(queryfield):
@@ -88,9 +86,17 @@ class HierarchyDisplay(p.SingletonPlugin):
         # search_params['q'] = _assemble_query(q_list)
         # fq_list = _tokenize_search('fq')
         # search_params['fq'] = _assemble_query(fq_list)
-        print('--------------SEARCH PARAMS ----------------------------------------------')
-        log.debug(search_params)
-        print('------------------------------------------------------------')
+        # orgas = tk.get_action('group_tree_section')({}, {'id': id_,
+        #                                                  'type': type_,
+        #                                                  'include_parents': include_parents})
+        print(' -------------------------- DEBUG THE FUCK ------------------- ')
+        gd = tk.c.group_dict or None
+        if gd:
+            gd.update({'include_parents': False})
+            res = tk.get_action('group_tree_section')({}, data_dict=gd)
+            print('--------------------------TYPE------------------------------------')
+            print(res)
+            print(' -------------------------- END ------------------- ')
         return search_params
 
 

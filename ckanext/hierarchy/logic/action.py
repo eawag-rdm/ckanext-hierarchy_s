@@ -26,7 +26,9 @@ def group_tree_section(context, data_dict):
     group, from the top-level group downwards.
 
     :param id: the id or name of the group to include in the tree
+    :param include_parents: if false, starts from given group
     :returns: the top GroupTreeNode of the tree section
+
     '''
     group_name_or_id = _get_or_bust(data_dict, 'id')
     model = _get_or_bust(context, 'model')
@@ -40,7 +42,10 @@ def group_tree_section(context, data_dict):
         raise p.toolkit.ValidationError(
             'Group type is "%s" not "%s" that %s' %
             (group.type, group_type, how_type_was_set))
-    root_group = (group.get_parent_group_hierarchy(type=group_type) or [group])[0]
+    if not data_dict.get('include_parents', True):
+        root_group = group
+    else:
+        root_group = (group.get_parent_group_hierarchy(type=group_type) or [group])[0]
     return _group_tree_branch(root_group, highlight_group_name=group.name,
                               type=group_type)
 

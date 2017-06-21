@@ -4,9 +4,9 @@ import ckan.model as model
 def group_tree(type_='organization'):
     return tk.get_action('group_tree')({}, {'type': type_})
 
-def group_tree_section(id_, type_='organization'):
+def group_tree_section(id_, type_='organization', include_parents=True):
     return tk.get_action('group_tree_section')(
-        {}, {'id': id_, 'type': type_})
+        {}, {'id': id_, 'type': type_, 'include_parents': include_parents})
 
 def group_tree_crumbs(id_):
     ''' Returns list of dicts with
