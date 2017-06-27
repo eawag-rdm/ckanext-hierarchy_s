@@ -3,7 +3,9 @@ from ckanext.hierarchy.logic import action
 from ckanext.hierarchy import helpers
 from ckan.lib.plugins import DefaultOrganizationForm
 import ckan.plugins.toolkit as tk
+from lucparser import LucParser
 import logging
+import pdb
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +49,6 @@ class HierarchyDisplay(p.SingletonPlugin):
     # HvW: Do this always
     def before_search(self, search_params):
         ''' If include children selected the query string is modified '''
-
         def _tokenize_search(queryfield):
             def repspace(st):
                 # deal with escaped brackets
@@ -88,8 +89,25 @@ class HierarchyDisplay(p.SingletonPlugin):
         # search_params['fq'] = _assemble_query(fq_list)
         # orgas = tk.get_action('group_tree_section')({}, {'id': id_,
         #                                                  'type': type_,
-        #                                                  'include_parents': include_parents})
-        print(' -------------------------- DEBUG THE FUCK ------------------- ')
+        #                                                    'include_parents': include_parents})
+        print('\n\n-------------------------- DEBUG THE FUCK ------------------- ')
+        lp = LucParser()
+        for qtyp in ['fq', 'q']:
+            query = search_params.get(qtyp, None)
+            if query:
+                queryterms = lp.deparse(query)
+                for i, q in enumerate(queryterms):
+                    if q.get('field') == 'owner_org':
+                        queryterms[i]['term'] = '('+ q.get('term') + ' OR ({}))'.format('3595c65e-25ec-4bde-87e7-340085a8feae')
+                search_params[qtyp] = lp.assemble(queryterms)
+
+        print('-------------------------- DEPARSED ------------------------')
+        print(queryterms)
+        print('--------------------------------------------------')
+        print('------------------------------ CONTEXT ---------------------------')
+        print(tk.c)
+        print('----------------------------SEARCH_PARAMS: -----------------------')
+        print(search_params)
         gd = tk.c.group_dict or None
         if gd:
             gd.update({'include_parents': False})
