@@ -2,6 +2,7 @@ import logging
 
 import ckan.plugins as p
 import ckan.logic as logic
+import ckan.model as model
 from ckanext.hierarchy.model import GroupTreeNode
 
 log = logging.getLogger(__name__)
@@ -14,7 +15,6 @@ def group_tree(context, data_dict):
 
     :returns: list of top-level GroupTreeNodes
     '''
-    model = _get_or_bust(context, 'model')
     group_type = data_dict.get('type', 'group')
     return [_group_tree_branch(group, type=group_type)
             for group in model.Group.get_top_level_groups(type=group_type)]
@@ -30,30 +30,49 @@ def group_tree_section(context, data_dict):
     :returns: the top GroupTreeNode of the tree section
 
     '''
+    group = _group_tree_check(data_dict)
+    if not data_dict.get('include_parents', True):
+        root_group = group
+    else:
+        root_group = (group.get_parent_group_hierarchy(type=group.type) or [group])[0]
+    return _group_tree_branch(root_group, highlight_group_name=group.name,
+                              type=group.type)
+
+@logic.side_effect_free
+def group_tree_children(context, data_dict):
+    '''Returns a flat list of groups of the children of the group
+    identified by parameter id in data_dict.
+
+    :param id: the id or name of the parent group.
+    :param type: "group" or "organization"
+    :returns: list of children GroupTreeNodes
+
+    '''
+    root_group = _group_tree_check(data_dict)
+    children = root_group.get_children_group_hierarchy(type=root_group.type)
+    children = [{'id': id, 'name': name, 'title': title}
+                for id, name, title, _ in children]
+    return children
+
+
+def _group_tree_check(data_dict):
     group_name_or_id = _get_or_bust(data_dict, 'id')
-    model = _get_or_bust(context, 'model')
     group = model.Group.get(group_name_or_id)
     if group is None:
         raise p.toolkit.ObjectNotFound
     group_type = data_dict.get('type', 'group')
     if group.type != group_type:
-        how_type_was_set = 'was specified' if data_dict.get('type') \
-                           else 'is filtered by default'
+        how_type_was_set = ('was specified' if data_dict.get('type')
+                            else 'is filtered by default')
         raise p.toolkit.ValidationError(
-            'Group type is "%s" not "%s" that %s' %
-            (group.type, group_type, how_type_was_set))
-    if not data_dict.get('include_parents', True):
-        root_group = group
-    else:
-        root_group = (group.get_parent_group_hierarchy(type=group_type) or [group])[0]
-    return _group_tree_branch(root_group, highlight_group_name=group.name,
-                              type=group_type)
-
-
+            'Group type is "{}" not "{}" that {}'
+            .format(group.type, group_type, how_type_was_set))
+    return group
+    
 def _group_tree_branch(root_group, highlight_group_name=None, type='group'):
     '''Returns a branch of the group tree hierarchy, rooted in the given group.
 
-    :param root_group_id: group object at the top of the part of the tree
+    :param root_group: group object at the top of the part of the tree
     :param highlight_group_name: group name that is to be flagged 'highlighted'
     :returns: the top GroupTreeNode of the tree
     '''
