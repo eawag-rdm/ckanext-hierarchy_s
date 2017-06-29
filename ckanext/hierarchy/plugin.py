@@ -4,6 +4,7 @@ from ckanext.hierarchy import helpers
 from ckan.lib.plugins import DefaultOrganizationForm
 import ckan.plugins.toolkit as tk
 from lucparser import LucParser
+import re
 import logging
 import pdb
 
@@ -21,17 +22,16 @@ class HierarchyDisplay(p.SingletonPlugin):
     p.implements(p.IPackageController, inherit=True)
 
     # IConfigurer
-
     def update_config(self, config):
         p.toolkit.add_template_directory(config, 'templates')
         p.toolkit.add_template_directory(config, 'public')
         p.toolkit.add_resource('public/scripts/vendor/jstree', 'jstree')
 
     # IActions
-
     def get_actions(self):
         return {'group_tree': action.group_tree,
                 'group_tree_section': action.group_tree_section,
+                'group_tree_children':action.group_tree_children
                 }
 
     # ITemplateHelpers
@@ -49,39 +49,16 @@ class HierarchyDisplay(p.SingletonPlugin):
     # HvW: Do this always
     def before_search(self, search_params):
         ''' If include children selected the query string is modified '''
-        def _tokenize_search(queryfield):
-            def repspace(st):
-                # deal with escaped brackets
-                # issue if st tarts with ( ? 
-                pat = re.compile(r'(\([^)]*\))+')
-                brackets = re.finditer(pat, st)
-                splitted = re.split(pat, st)
-                repstrings = []
-                for b in brackets:
-                    repstrings.append(re.sub(r' +', '__SPACE__',b.group()))
-                for k, i in enumerate(range(1,len(splitted),2)):
-                    splitted[i] = repstrings[k] 
-                return ''.join(splitted)
 
-            def splitspaces(st):
-                st = re.sub(": +", ":", st)
-                ## split querystring at spaces if space doesn't occur in quotes
-                ## http://stackoverflow.com/a/2787064
-                # deal with escaped quotqtion marks
-                # implement this: https://stackoverflow.com/a/2787979/6930916
-                pat = re.compile(r'''((?:[^ "']|"[^"]*"|'[^']*')+)''')
-                splitspaces = pat.split(st)[1::2]
-                splitspaces = [el.replace('__SPACE__',' ') for el in splitspaces]
-                return splitspaces
-
-            splitquery = splitspaces(repspace(search_params.get(queryfield, '')))
-            querylist = [e.split(':', 1) for e in splitquery]
-            return querylist
-        
-        def _assemble_query(q_list):
-            print q_list
-            q_string = ' '.join([':'.join(el) for el in q_list])
-            return q_string
+        def _get_organizations_from_subquery(subquery):
+            patall = '"?([\w-]+)"?'
+            patwrong = 'AND|OR|NOT'
+            patnot = 'NOT\s+("?([\w-]+)"?)'
+            parentorgs = set(re.findall(patall, subquery))
+            parentwrong = set(re.findall(patwrong, subquery))
+            parentnot = set(re.findall(patnot, subquery))
+            parentorgs = list(parentorgs - parentwrong - parentnot)
+            return parentorgs
             
         # q_list = _tokenize_search('q')
         # search_params['q'] = _assemble_query(q_list)
@@ -91,30 +68,33 @@ class HierarchyDisplay(p.SingletonPlugin):
         #                                                  'type': type_,
         #                                                    'include_parents': include_parents})
         print('\n\n-------------------------- DEBUG THE FUCK ------------------- ')
+        print('------------------------------ CONTEXT ---------------------------')
+        print(tk.c)
+        print('----------------------------SEARCH_PARAMS: -----------------------')
+        print(search_params)
         lp = LucParser()
+        #childorgas = tk.get_action('group_tree_children')({}, data_dict=
         for qtyp in ['fq', 'q']:
             query = search_params.get(qtyp, None)
             if query:
                 queryterms = lp.deparse(query)
                 for i, q in enumerate(queryterms):
-                    if q.get('field') == 'owner_org':
-                        queryterms[i]['term'] = '('+ q.get('term') + ' OR ({}))'.format('3595c65e-25ec-4bde-87e7-340085a8feae')
-                search_params[qtyp] = lp.assemble(queryterms)
+                    if not isinstance(q, dict):
+                        continue
+                    fieldname = q.get('field')
+                    if fieldname not in ['owner_org', 'organization']:
+                        continue
+                    parentgroups = _get_organizations_from_subquery(q.get('term'))
+                    print('parents {}: {}'.format(fieldname, parentgroups))
+                    children = [tk.get_action('group_tree_children')({}, data_dict={'id': p, 'type': 'organization'}) for p in parentgroups]
+                    print('\nchildren: {}'.format(children))
+                    childlist = [c[{'owner_org': 'id', 'organization': 'name'}[fieldname]] for child in children for c in child]
+                    print('\nchildlist: {}'.format(childlist))
+                    if childlist:
+                        childsearch = ' OR ' + ' OR '.join(childlist)
+                        print('\nchildsearch: {}'.format(childsearch))
+                        search_params[qtyp] = lp.add_to_query(search_params[qtyp], childsearch, fieldname=fieldname)
 
-        print('-------------------------- DEPARSED ------------------------')
-        print(queryterms)
-        print('--------------------------------------------------')
-        print('------------------------------ CONTEXT ---------------------------')
-        print(tk.c)
-        print('----------------------------SEARCH_PARAMS: -----------------------')
-        print(search_params)
-        gd = tk.c.group_dict or None
-        if gd:
-            gd.update({'include_parents': False})
-            res = tk.get_action('group_tree_section')({}, data_dict=gd)
-            print('--------------------------TYPE------------------------------------')
-            print(res)
-            print(' -------------------------- END ------------------- ')
         return search_params
 
 
