@@ -60,20 +60,7 @@ class HierarchyDisplay(p.SingletonPlugin):
             parentorgs = list(parentorgs - parentwrong - parentnot)
             return parentorgs
             
-        # q_list = _tokenize_search('q')
-        # search_params['q'] = _assemble_query(q_list)
-        # fq_list = _tokenize_search('fq')
-        # search_params['fq'] = _assemble_query(fq_list)
-        # orgas = tk.get_action('group_tree_section')({}, {'id': id_,
-        #                                                  'type': type_,
-        #                                                    'include_parents': include_parents})
-        print('\n\n-------------------------- DEBUG THE FUCK ------------------- ')
-        print('------------------------------ CONTEXT ---------------------------')
-        print(tk.c)
-        print('----------------------------SEARCH_PARAMS: -----------------------')
-        print(search_params)
         lp = LucParser()
-        #childorgas = tk.get_action('group_tree_children')({}, data_dict=
         for qtyp in ['fq', 'q']:
             query = search_params.get(qtyp, None)
             if query:
@@ -85,16 +72,18 @@ class HierarchyDisplay(p.SingletonPlugin):
                     if fieldname not in ['owner_org', 'organization']:
                         continue
                     parentgroups = _get_organizations_from_subquery(q.get('term'))
-                    print('parents {}: {}'.format(fieldname, parentgroups))
-                    children = [tk.get_action('group_tree_children')({}, data_dict={'id': p, 'type': 'organization'}) for p in parentgroups]
-                    print('\nchildren: {}'.format(children))
-                    childlist = [c[{'owner_org': 'id', 'organization': 'name'}[fieldname]] for child in children for c in child]
-                    print('\nchildlist: {}'.format(childlist))
+                    
+                    children = [tk.get_action('group_tree_children')
+                                ({}, data_dict={'id': p, 'type':'organization'})
+                                for p in parentgroups]
+                    childlist = [c[{'owner_org': 'id', 'organization':
+                                    'name'}[fieldname]] 
+                                 for child in children for c in child]
                     if childlist:
                         childsearch = ' OR ' + ' OR '.join(childlist)
-                        print('\nchildsearch: {}'.format(childsearch))
-                        search_params[qtyp] = lp.add_to_query(search_params[qtyp], childsearch, fieldname=fieldname)
-
+                        search_params[qtyp] = lp.add_to_query(
+                            search_params[qtyp],
+                            childsearch, fieldname=fieldname)
         return search_params
 
 
