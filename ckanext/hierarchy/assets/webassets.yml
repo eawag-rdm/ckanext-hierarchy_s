@@ -1,0 +1,8 @@
+jquery.jstree_js:
+  filter: rjsmin
+  output: ckanext-hierachy/%(version)s-jquery.jstree.js
+  contents:
+    - js/jquery.jstree.js
+  extra:
+    preload:
+     - base/main
