@@ -6,7 +6,6 @@ import ckan.plugins.toolkit as tk
 from lucparser import LucParser
 import re
 import logging
-import pdb
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +24,8 @@ class HierarchyDisplay(p.SingletonPlugin):
     def update_config(self, config):
         p.toolkit.add_template_directory(config, 'templates')
         p.toolkit.add_template_directory(config, 'public')
-        p.toolkit.add_resource('public/scripts/vendor/jstree', 'jstree')
+        # currently not being used
+        #p.toolkit.add_resource('public/scripts/vendor/jstree', 'jstree')
 
     # IActions
     def get_actions(self):
